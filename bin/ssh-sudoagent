@@ -1,0 +1,11 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+if [ -z "$SUDOAGENT_AUTH_SOCK" ]; then
+    eval "$(sudoagent-start)"
+    sudoagent-enable
+fi
+
+# Always different name
+export SUDOAGENT_AUTH_SOCK_REMOTE="$(echo -n /tmp/sudoagent-;mktemp -u XXXXXXXXXXXXXXXX)"
+ssh -R "$SUDOAGENT_AUTH_SOCK_REMOTE":"$SUDOAGENT_AUTH_SOCK" -o 'SendEnv SUDOAGENT_AUTH_SOCK_REMOTE' -o 'ForwardAgent no' "$@"

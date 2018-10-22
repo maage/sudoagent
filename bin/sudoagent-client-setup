@@ -1,0 +1,48 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+set -x
+
+touch -- "$HOME"/.bash_logout
+
+egrep -q '^sars=.*SUDOAGENT_AUTH_SOCK_REMOTE' ~/.bash_logout
+case "$?" in
+    0) ;;
+    1)
+cat >> "$HOME"/.bash_logout <<EOF
+# <sudoagent>
+sars="${SUDOAGENT_AUTH_SOCK_REMOTE#/tmp/sudoagent}"
+if [ "$sars" != "$SUDOAGENT_AUTH_SOCK_REMOTE" ] && [ "${sars/\//}" = "$sars" ] && [ -G "$SUDOAGENT_AUTH_SOCK_REMOTE" ] && [ -S "$SUDOAGENT_AUTH_SOCK_REMOTE" ]; then
+  rm -f -- "$SUDOAGENT_AUTH_SOCK_REMOTE"
+fi
+sudo -k
+# </sudoagent>
+EOF
+    ;;
+    *) exit 1 ;;
+esac
+
+
+egrep -q 'SSH_AUTH_SOCK=.*SUDOAGENT_AUTH_SOCK_REMOTE' "$HOME"/.bash_profile
+case $? in
+    0) ;;
+    1)
+cat >> "$HOME"/.bash_profile <<EOF
+# <sudoagent>
+if [ "$SUDOAGENT_AUTH_SOCK_REMOTE" ]; then
+     export SSH_AUTH_SOCK="$SUDOAGENT_AUTH_SOCK_REMOTE"
+fi
+# </sudoagent>
+EOF
+    ;;
+    *) exit 1 ;;
+esac
+
+install -d -m 0700 -- "$HOME"/.sudoagent
+chmod 0700 -- "$HOME"/.sudoagent
+chown -R --reference "$HOME" -- "$HOME"/.sudoagent
+
+for f in "$HOME"/.sudoagent/authorized_keys; do
+    [ -f "$f" ] || continue
+    chmod 0600 -- "$f"
+done

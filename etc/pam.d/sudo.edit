@@ -1,0 +1,28 @@
+#!/bin/sh
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+case "$1" in
+    install)
+egrep -q '^[[:space:]]*auth[[:space:]].*[[:space:]]pam_ssh_agent_auth\.so[[:space:]].*sudoagent' /etc/pam.d/sudo
+case $? in
+    0) ;;
+    1)
+    sed -i -e '/^[^#]/{a\
+auth       sufficient   pam_ssh_agent_auth.so file=~/.sudoagent/authorized_keys
+}' /etc/pam.d/sudo
+    ;;
+    2) exit 1 ;;
+esac
+    ;;
+    uninstall)
+egrep -q '^[[:space:]]*auth[[:space:]].*[[:space:]]pam_ssh_agent_auth\.so[[:space:]].*sudoagent' /etc/pam.d/sudo
+case $? in
+    0)
+    sed -i -e '/pam_ssh_agent_auth.*sudoagent/d' /etc/pam.d/sudo
+    ;;
+    1) ;;
+    2) exit 1 ;;
+esac
+    ;;
+    *) exit 1
+esac

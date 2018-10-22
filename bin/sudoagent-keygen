@@ -1,0 +1,10 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 name"
+    exit 2
+fi
+
+install -d -m 0700 "$HOME"/.sudoagent
+ssh-keygen -t ed25519 -f .sudoagent/id_"$1"_ed25519 -C "sudoagent;$USER@$HOSTNAME;$1"

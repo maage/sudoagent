@@ -1,0 +1,39 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+SCRIPT="${BASH_SOURCE}"
+if [[ "${SCRIPT#/}" = "$SCRIPT" ]]; then
+    SCRIPT="$(readlink -n -f -- "$PWD"/"$SCRIPT" && echo -n x)"
+    SCRIPT="${SCRIPT%x}"
+fi
+
+LOCK="$HOME"/.sudoagent/.lock
+ENVS="$HOME"/.sudoagent/envs
+
+[ -d "$HOME"/.sudoagent ] || install -d -m 0700 -- "$HOME"/.sudoagent
+[ -f "$LOCK" ] || touch -- "$LOCK"
+
+if [ "$FLOCKER" != "$SCRIPT $LOCK" ]; then
+    env FLOCKER="$SCRIPT $LOCK" flock -en --conflict-exit-code 22 -- "$LOCK" "$SCRIPT" "$@"
+    rc=$?
+    case "$rc" in
+        22)
+            if [ ! -f "$ENVS" ]; then
+                echo "ERROR: Missing: $ENVS"
+                exit 1
+            fi
+            source "$ENVS" > /dev/null || exit 1
+            if [ -z "$SUDOAGENT_AGENT_PID" ] || ! kill -0 -- "$SUDOAGENT_AGENT_PID"; then
+                echo "ERROR: Missing ssh-agent process PID $SUDOAGENT_AGENT_PID"
+                exit 1
+            fi
+            echo source "$ENVS"
+            exit 0
+            ;;
+    esac
+    exit $rc
+fi
+
+ssh-agent -s|sed 's/SSH_/SUDOAGENT_/g' > "$ENVS".tmp && mv -f -- "$ENVS".tmp "$ENVS" || exit 1
+echo source "$ENVS"
+exit 0

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+declare -A done
+
+add() {
+    local f="$1"; shift
+    local ff
+    ff="$(readlink -n -f -- "$f";echo -n x)"
+    ff="${ff%x}"
+    if [ -z "${done[$ff]}" ]; then
+        done["$ff"]=1
+        [ -f "$ff" ] || continue
+        ssh-add -c "$ff"
+    fi
+}
+
+if [ -z "$SUDOAGENT_AUTH_SOCK" ]; then
+    eval "$(sudoagent-start)"
+fi
+
+export SSH_AUTH_SOCK="$SUDOAGENT_AUTH_SOCK"
+
+if [ $# -gt 0 ]; then
+    for a in "$@"; do
+        add "$a"
+    done
+else
+    for a in "$HOME"/.sudoagent/id_*; do
+        case "$a" in
+            *.pub) continue ;;
+        esac
+        add "$a"
+    done
+fi

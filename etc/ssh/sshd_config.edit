@@ -1,0 +1,17 @@
+#!/bin/bash
+# Author: Markus Linnala <Markus.Linnala@cybercom.com> 2018
+
+case "$1" in
+    install)
+egrep -q SUDOAGENT /etc/ssh/sshd_config
+case $? in
+    0) ;;
+    1) echo 'AcceptEnv SUDOAGENT_*' >> /etc/ssh/sshd_config ;;
+    2) exit 1 ;;
+esac
+    ;;
+    uninstall)
+sed -i '/AcceptEnv SUDOAGENT/d' /etc/ssh/sshd_config
+    ;;
+    *) exit 1 ;;
+esac
